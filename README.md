@@ -81,10 +81,20 @@ inactividad. Necesita unos 5 GB de RAM para el 7B y 2,5 GB para el 3B.
 Crea una clave gratuita y pégala en la configuración:
 
 - Groq: https://console.groq.com → *API Keys* (modelo `llama-3.3-70b-versatile`).
-- Google Gemini: https://aistudio.google.com/apikey (modelo `gemini-2.0-flash`).
+- Google Gemini: https://aistudio.google.com/apikey (modelo `gemini-3.5-flash`).
 
 Los límites de las capas gratuitas cambian con el tiempo; para uso personal de correo suelen
 ser de sobra. Si se agotan, el error lo indica (HTTP 429).
+
+> **Si aparece un HTTP 404 con Gemini**, es que Google retiró o renombró ese modelo: el campo
+> *Modelo* de la ventana de configuración es editable. Para ver los que acepta tu clave:
+>
+> ```powershell
+> $k = "<tu clave>"
+> (Invoke-RestMethod "https://generativelanguage.googleapis.com/v1beta/openai/models" -Headers @{ Authorization = "Bearer $k" }).data.id
+> ```
+>
+> Elige uno que termine en `-flash` (los `pro` gastan cuota mucho más rápido).
 
 ## Cómo funciona
 

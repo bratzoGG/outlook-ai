@@ -48,6 +48,10 @@ Recomendación de uso: **Ollama para correo de clientes** (nada sale del equipo)
 Groq solo para textos no sensibles**, porque en las capas gratuitas el proveedor puede usar
 los datos para mejorar sus productos.
 
+Si Gemini devuelve **HTTP 404**, el modelo que trae por defecto ya no existe: escribe el
+nuevo en el campo *Modelo* (por ejemplo `gemini-3.5-flash`). Los disponibles para tu clave se
+listan en `https://generativelanguage.googleapis.com/v1beta/openai/models`.
+
 ## Diagnóstico (PowerShell)
 
 Primero define la ruta del script:

@@ -72,7 +72,7 @@ function Get-Preset {
     switch ($Name) {
         'deepseek' { return [pscustomobject]@{ Id = 'deepseek'; Label = 'DeepSeek (pago por uso)'; BaseUrl = 'https://api.deepseek.com'; Model = 'deepseek-chat'; NeedsKey = $true } }
         'groq'     { return [pscustomobject]@{ Id = 'groq';     Label = 'Groq (capa gratuita)';    BaseUrl = 'https://api.groq.com/openai/v1'; Model = 'llama-3.3-70b-versatile'; NeedsKey = $true } }
-        'gemini'   { return [pscustomobject]@{ Id = 'gemini';   Label = 'Google Gemini (capa gratuita)'; BaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai'; Model = 'gemini-2.0-flash'; NeedsKey = $true } }
+        'gemini'   { return [pscustomobject]@{ Id = 'gemini';   Label = 'Google Gemini (capa gratuita)'; BaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai'; Model = 'gemini-3.5-flash'; NeedsKey = $true } }
         'ollama'   { return [pscustomobject]@{ Id = 'ollama';   Label = 'Ollama (local, gratis)';  BaseUrl = 'http://localhost:11434/v1'; Model = 'qwen2.5:7b'; NeedsKey = $false } }
         default    { return [pscustomobject]@{ Id = 'custom';   Label = 'Personalizado';           BaseUrl = ''; Model = ''; NeedsKey = $false } }
     }
