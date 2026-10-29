@@ -13,6 +13,8 @@ el correo que tengas seleccionado, con un atajo de teclado y sin salir de Outloo
 > Alternativa libre a las extensiones de IA de pago para Outlook. Hecho con PowerShell y
 > automatización COM: sin instaladores, sin frameworks, sin dependencias.
 
+![Panel de resultado de Outlook AI: el correo original arriba y la respuesta propuesta abajo con los botones Copiar y Crear borrador de respuesta](assets/panel-resultado.png)
+
 ## Atajos
 
 | Atajo | Función |
