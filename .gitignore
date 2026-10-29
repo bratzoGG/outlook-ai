@@ -1,0 +1,13 @@
+# artefactos de prueba
+*.log
+pull.log
+
+# sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# editores
+.vscode/
+.idea/
+*.swp
