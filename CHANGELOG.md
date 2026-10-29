@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 — 2026-10-29
+
+- Las respuestas generadas ya no salen con frases pegadas («cita.Gracias»): se normaliza el
+  espaciado después de `.`, `!`, `?` y `,` sin alterar el contenido, y se colapsan los saltos
+  de línea repetidos.
+- Captura del panel de resultado en el README.
+
 ## 1.0.0 — 2026-10-29
 
 Primera versión pública.
