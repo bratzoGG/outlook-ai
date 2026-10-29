@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 — 2026-10-29
+
+- **Una clave por motor**: se puede alternar entre Ollama, Groq, Gemini y DeepSeek sin
+  volver a pegar la clave; cada una se guarda cifrada por separado.
+- Mensajes propios para HTTP 400 y 403 (Google devuelve 400 con una clave inválida).
+- El modelo por defecto de Gemini pasa a `gemini-3.5-flash`: `gemini-2.0-flash` ya no existe
+  y devolvía 404. Documentado cómo listar los modelos que acepta cada clave.
+
 ## 1.0.1 — 2026-10-29
 
 - Las respuestas generadas ya no salen con frases pegadas («cita.Gracias»): se normaliza el
