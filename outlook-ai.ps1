@@ -458,7 +458,15 @@ function Invoke-Model {
 
         $json = $text | ConvertFrom-Json
         if (-not $json.choices -or $json.choices.Count -eq 0) { throw "Respuesta vacía del modelo.`n`n$text" }
-        return [string]$json.choices[0].message.content
+        $answer = [string]$json.choices[0].message.content
+
+        # Los modelos pequeños a veces pegan frases («cita.Gracias») o dejan saltos
+        # de línea a mitad de párrafo. Se normaliza el espaciado sin tocar el contenido.
+        $answer = [regex]::Replace($answer, '([.!?…])([A-ZÁÉÍÓÚÑÜ])', '$1 $2')
+        $answer = [regex]::Replace($answer, '(,)([A-ZÁÉÍÓÚÑÜ])', '$1 $2')
+        $answer = $answer -replace "`r`n", "`n"
+        $answer = [regex]::Replace($answer, "`n{3,}", "`n`n")
+        return $answer.Trim()
     } finally {
         if ($null -ne $splash) { $splash.Close(); $splash.Dispose() }
         $content.Dispose()
