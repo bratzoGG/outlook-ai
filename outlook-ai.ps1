@@ -85,20 +85,46 @@ function Get-ProviderList {
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuración
 # ─────────────────────────────────────────────────────────────────────────────
-function Get-Config {
+function ConvertFrom-Dpapi {
+    param([string]$Cipher)
+    if ([string]::IsNullOrWhiteSpace($Cipher)) { return '' }
+    try {
+        $secure = ConvertTo-SecureString $Cipher
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+        try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+        finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+    } catch { return '' }
+}
+
+function ConvertTo-Dpapi {
+    param([string]$Plain)
+    if ([string]::IsNullOrWhiteSpace($Plain)) { return '' }
+    $secure = ConvertTo-SecureString -String $Plain -AsPlainText -Force
+    return ($secure | ConvertFrom-SecureString)
+}
+
+function Read-RawConfig {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    try { return (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json) } catch { return $null }
+}
+
+function Get-Config {
+    param([string]$Path)
+    $raw = Read-RawConfig -Path $Path
+    if ($null -eq $raw) { return $null }
     try {
-        $raw = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
-        $key = ''
-        if ($raw.apiKey) {
-            $secure = ConvertTo-SecureString $raw.apiKey
-            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-            try { $key = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
-            finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
-        }
         $provider = 'deepseek'
         if ($raw.provider) { $provider = [string]$raw.provider }
+
+        # Una clave por motor, para poder alternar sin volver a pegarlas.
+        $keys = @{}
+        if ($raw.PSObject.Properties['keys'] -and $null -ne $raw.keys) {
+            foreach ($p in $raw.keys.PSObject.Properties) { $keys[$p.Name] = ConvertFrom-Dpapi ([string]$p.Value) }
+        }
+        # Compatibilidad con configuraciones antiguas (una sola clave).
+        if ($raw.apiKey -and -not $keys.ContainsKey($provider)) { $keys[$provider] = ConvertFrom-Dpapi ([string]$raw.apiKey) }
+
         $preset = Get-Preset $provider
         $baseUrl = $preset.BaseUrl
         if ($raw.baseUrl) { $baseUrl = [string]$raw.baseUrl }
@@ -106,8 +132,13 @@ function Get-Config {
         if ($raw.model) { $model = [string]$raw.model }
         $tone = 'formal'
         if ($raw.tone) { $tone = [string]$raw.tone }
+
+        $currentKey = ''
+        if ($keys.ContainsKey($provider)) { $currentKey = $keys[$provider] }
+
         return [pscustomobject]@{
-            ApiKey   = $key
+            ApiKey   = $currentKey
+            Keys     = $keys
             Provider = $provider
             BaseUrl  = $baseUrl
             Model    = $model
@@ -122,17 +153,30 @@ function Save-Config {
     param([string]$Path, [string]$Provider, [string]$BaseUrl, [string]$Model, [string]$ApiKey, [string]$Tone)
     $dir = Split-Path -Parent $Path
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-    $encrypted = ''
-    if ($ApiKey) {
-        $secure = ConvertTo-SecureString -String $ApiKey -AsPlainText -Force
-        $encrypted = $secure | ConvertFrom-SecureString
+
+    # Conservar las claves cifradas de los demás motores.
+    $keys = @{}
+    $raw = Read-RawConfig -Path $Path
+    if ($null -ne $raw) {
+        if ($raw.PSObject.Properties['keys'] -and $null -ne $raw.keys) {
+            foreach ($p in $raw.keys.PSObject.Properties) { $keys[$p.Name] = [string]$p.Value }
+        } elseif ($raw.apiKey -and $raw.provider) {
+            $keys[[string]$raw.provider] = [string]$raw.apiKey
+        }
     }
+
+    if (-not [string]::IsNullOrWhiteSpace($ApiKey)) { $keys[$Provider] = ConvertTo-Dpapi $ApiKey }
+
+    $encryptedCurrent = ''
+    if ($keys.ContainsKey($Provider)) { $encryptedCurrent = $keys[$Provider] }
+
     $obj = [ordered]@{
         provider = $Provider
         baseUrl  = $BaseUrl
         model    = $Model
         tone     = $Tone
-        apiKey   = $encrypted
+        apiKey   = $encryptedCurrent
+        keys     = $keys
     }
     $json = $obj | ConvertTo-Json -Depth 5
     [System.IO.File]::WriteAllText($Path, $json, (New-Object System.Text.UTF8Encoding($false)))
@@ -234,13 +278,19 @@ if ($Setup) {
     }
 
     $providerIdsRef = $providerIds
+    $storedKeys = @{}
+    if ($current -and $current.Keys) { $storedKeys = $current.Keys }
+
     $applyPreset = {
         $id = $providerIdsRef[$cmbProv.SelectedIndex]
         $p = Get-Preset $id
-        $txtModel.Text = $p.Model
-        $txtUrl.Text = $p.BaseUrl
+        if ($p.Model) { $txtModel.Text = $p.Model }
+        if ($p.BaseUrl) { $txtUrl.Text = $p.BaseUrl }
         $lblHint.Text = $hints[$id]
         $txtKey.Enabled = $p.NeedsKey
+        # Recuperar la clave que ya estuviera guardada para ese motor.
+        $txtKey.Text = ''
+        if ($storedKeys.ContainsKey($id)) { $txtKey.Text = $storedKeys[$id] }
         if (-not $p.NeedsKey) { $txtKey.Clear() }
     }
 
@@ -267,14 +317,15 @@ if ($Setup) {
     if ($win.ShowDialog() -eq 'OK') {
         $provId = $providerIdsRef[$cmbProv.SelectedIndex]
         $preset = Get-Preset $provId
-        $key = $txtKey.Text.Trim()
+        $key = ''
+        if ($preset.NeedsKey) { $key = $txtKey.Text.Trim() }
         if ($preset.NeedsKey -and [string]::IsNullOrWhiteSpace($key)) {
             Show-Message 'Ese motor necesita una clave de API.' 'Outlook AI' 'Warning'
             exit 1
         }
         Save-Config -Path $ConfigPath -Provider $provId -BaseUrl $txtUrl.Text.Trim() `
             -Model $txtModel.Text.Trim() -ApiKey $key -Tone 'formal'
-        Show-Message ("Configuración guardada.`n`nMotor: {0}`nModelo: {1}" -f $preset.Label, $txtModel.Text.Trim()) 'Outlook AI'
+        Show-Message ("Configuración guardada.`n`nMotor: {0}`nModelo: {1}`n`nLas claves de los demás motores se conservan." -f $preset.Label, $txtModel.Text.Trim()) 'Outlook AI'
     }
     exit 0
 }
@@ -449,7 +500,9 @@ function Invoke-Model {
 
         if (-not $response.IsSuccessStatusCode) {
             $code = [int]$response.StatusCode
+            if ($code -eq 400) { throw "La petición fue rechazada (HTTP 400). Suele ser la clave de API incorrecta o el nombre del modelo mal escrito.`n`n$text" }
             if ($code -eq 401) { throw "Clave de API no válida (HTTP 401). Revisa la configuración." }
+            if ($code -eq 403) { throw "Acceso denegado (HTTP 403). La clave puede no tener permiso para ese modelo.`n`n$text" }
             if ($code -eq 402) { throw "La cuenta no tiene saldo (HTTP 402). Recarga o cambia a un motor gratuito." }
             if ($code -eq 404) { throw "Modelo o dirección no encontrados (HTTP 404). Comprueba el modelo «$Model» y la dirección «$BaseUrl»." }
             if ($code -eq 429) { throw "Límite de peticiones alcanzado (HTTP 429). Espera un momento o cambia de motor." }

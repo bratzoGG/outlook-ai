@@ -35,6 +35,19 @@ El texto es editable antes de usarlo y nada se envía solo.
 | Configurar motor y clave | Elige motor (Ollama, Groq, Gemini, DeepSeek), modelo, dirección y clave |
 | 1 … 7 | Los mismos atajos, por si uno no responde |
 
+## Cambiar de motor (Ollama ↔ Gemini)
+
+1. Inicio → **Outlook AI** → *Configurar motor y clave*.
+2. Elige el motor en la lista. El modelo y la dirección se rellenan solos.
+3. **Guardar**. No hace falta reiniciar: el siguiente atajo ya usa el motor nuevo.
+
+Cada motor guarda **su propia clave**: si vuelves a Ollama y luego a Gemini, la clave de
+Gemini sigue ahí y no hay que volver a pegarla. Ollama no necesita clave.
+
+Recomendación de uso: **Ollama para correo de clientes** (nada sale del equipo) y **Gemini o
+Groq solo para textos no sensibles**, porque en las capas gratuitas el proveedor puede usar
+los datos para mejorar sus productos.
+
 ## Diagnóstico (PowerShell)
 
 Primero define la ruta del script:
